@@ -1,9 +1,9 @@
 import express from "express";
+import API_ROUTES from "./config/apiRoutes";
+import setupRoutes from "./middleware/proxy";
 
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
-});
+app.use("/api", setupRoutes(API_ROUTES));
 
 export default app;

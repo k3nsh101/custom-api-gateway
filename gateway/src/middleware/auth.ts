@@ -8,18 +8,24 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
   if (!routeConfig.protected) return next();
 
-  const token = req.header("Authorization");
+  const authHeader = req.header("Authorization");
+  if (!authHeader) throw new UnAuthorizedError();
+
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : authHeader;
 
   if (!token) throw new UnAuthorizedError();
 
-  const jwt_secret = process.env["JWT_SECRET"];
-  if (!jwt_secret) throw new Error();
+  const jwtSecret = process.env["JWT_SECRET"];
+  if (!jwtSecret) throw new Error();
 
-  console.log("jwt_secret", jwt_secret);
-
-  const decorded = jwt.verify(token!, process.env["JWT_SECRET"]!);
-  console.log(decorded);
-  next();
+  try {
+    jwt.verify(token!, process.env["JWT_SECRET"]!);
+    next();
+  } catch (err) {
+    throw new UnAuthorizedError();
+  }
 };
 
 export default authMiddleware;

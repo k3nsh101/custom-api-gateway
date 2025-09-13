@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { Route } from "../interfaces";
 
-const setupRoutes = (routes: Route[]) => {
+const proxyMiddleware = (routes: Route[]) => {
   const router = Router();
 
   routes.forEach((route) => {
@@ -18,4 +18,4 @@ const setupRoutes = (routes: Route[]) => {
   return router;
 };
 
-export default setupRoutes;
+export default proxyMiddleware;

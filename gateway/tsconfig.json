@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",
-    "outDir": "./dist",
+    "rootDir": ".",
 
     // Environment Settings
     "module": "CommonJs",
@@ -12,11 +11,6 @@
     "lib": ["esnext"],
     "types": ["node"],
     // and npm install -D @types/node
-
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
@@ -38,5 +32,6 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["src", "test"],
 }

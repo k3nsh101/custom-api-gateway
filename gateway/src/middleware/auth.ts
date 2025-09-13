@@ -1,8 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { UnAuthorizedError } from "../utils/errorUtils";
+import { Route } from "../interfaces";
 
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  const routeConfig: Route = res.locals["routeConfig"];
+
+  if (!routeConfig.protected) return next();
+
   const token = req.header("Authorization");
 
   if (!token) throw new UnAuthorizedError();

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { Route } from "../interfaces";
 import authMiddleware from "./auth";
+import rateLimitMiddleware from "./rateLimit";
 
 const proxyMiddleware = (routes: Route[]) => {
   const router = Router();
@@ -13,6 +14,7 @@ const proxyMiddleware = (routes: Route[]) => {
         res.locals["routeConfig"] = route;
         next();
       },
+      rateLimitMiddleware,
       authMiddleware,
       createProxyMiddleware({
         target: route.upstream,

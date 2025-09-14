@@ -9,7 +9,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (!routeConfig.protected) return next();
 
   const authHeader = req.header("Authorization");
-  if (!authHeader) throw new UnAuthorizedError();
+  if (!authHeader) return next(new UnAuthorizedError());
 
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.slice(7)
@@ -18,13 +18,13 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (!token) throw new UnAuthorizedError();
 
   const jwtSecret = process.env["JWT_SECRET"];
-  if (!jwtSecret) throw new Error();
+  if (!jwtSecret) return next(new Error());
 
   try {
     jwt.verify(token!, process.env["JWT_SECRET"]!);
     next();
   } catch (err) {
-    throw new UnAuthorizedError();
+    return next(new UnAuthorizedError());
   }
 };
 

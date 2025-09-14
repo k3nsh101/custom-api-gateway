@@ -26,4 +26,8 @@ describe("Requesting forwarding", () => {
   it("should return success from service B", async () => {
     await request(app).get("/api/serviceB").expect(200);
   });
+
+  it("should return resource not found from services other than A or B", async () => {
+    await request(app).get("/api/serviceE").expect(404);
+  });
 });

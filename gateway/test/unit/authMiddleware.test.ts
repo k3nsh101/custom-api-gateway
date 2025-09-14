@@ -66,7 +66,7 @@ describe("Auth Middleware Tests (Unit) - Route protected", () => {
     authMiddleware(mockRequest as Request, mockResponse as Response, mockNext);
 
     expect(mockNext).toHaveBeenCalled();
-    const errorPassed = mockNext.mock.calls[0][0];
+    const errorPassed = mockNext.mock.calls[0]?.[0];
     expect(errorPassed).toBeInstanceOf(UnAuthorizedError);
   });
 
@@ -80,7 +80,7 @@ describe("Auth Middleware Tests (Unit) - Route protected", () => {
     authMiddleware(mockRequest as Request, mockResponse as Response, mockNext);
 
     expect(mockNext).toHaveBeenCalled();
-    const errorPassed = mockNext.mock.calls[0][0];
+    const errorPassed = mockNext.mock.calls[0]?.[0];
     expect(errorPassed).toBeInstanceOf(UnAuthorizedError);
   });
 

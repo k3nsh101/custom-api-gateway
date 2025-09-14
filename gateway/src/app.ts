@@ -1,8 +1,8 @@
 import express from "express";
 import API_ROUTES from "./config/apiRoutes";
 import proxyMiddleware from "./middleware/proxy";
-import errorMiddleware from "./middleware/errorMiddleware";
-import notFoundMiddleware from "./middleware/notFoundMiddleware";
+import errorMiddleware from "./middleware/error";
+import notFoundMiddleware from "./middleware/notFound";
 
 const app = express();
 

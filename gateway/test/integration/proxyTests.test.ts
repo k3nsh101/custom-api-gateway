@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import request from "supertest";
-import app from "../src/app";
-import { generateTestToken } from "./util/jwt";
+import app from "../../src/app";
+import { generateTestToken } from "../util/jwt";
 
 describe("Requesting forwarding", () => {
   it("should return unauthorized from service A when token is empty", async () => {

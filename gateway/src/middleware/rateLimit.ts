@@ -2,10 +2,9 @@ import { NextFunction, Response, Request } from "express";
 import { UserTokenBucket } from "../interfaces";
 import { TooManyRequestsError } from "../utils/errorUtils";
 import { BUCKET_REFILL_RATE, RATE_LIMIT_CAPACITY } from "../config/config";
+import RedisClient from "../config/redis";
 
-export let tokenBucket = new Map<string, UserTokenBucket>();
-
-const rateLimitMiddleware = (
+const rateLimitMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -19,8 +18,16 @@ const rateLimitMiddleware = (
   const key = `rate:${req.ip}`;
   let bucket: UserTokenBucket | null = null;
 
-  if (tokenBucket.get(key)) {
-    bucket = tokenBucket.get(key) as UserTokenBucket;
+  const redis = RedisClient.getInstance();
+  redis.connect();
+  const redisClient = redis.getClient();
+  const bucketRaw = await redisClient.hGetAll(key);
+
+  if (bucketRaw && bucketRaw["last"]) {
+    bucket = {
+      tokens: Number(bucketRaw["tokens"]),
+      last: Number(bucketRaw["last"]),
+    };
   } else {
     bucket = { tokens: RATE_LIMIT_CAPACITY, last: now };
   }
@@ -38,7 +45,10 @@ const rateLimitMiddleware = (
   bucket.tokens = bucket.tokens - 1;
   bucket.last = now;
 
-  tokenBucket.set(key, bucket);
+  redisClient.hSet(key, {
+    tokens: bucket.tokens,
+    last: bucket.last,
+  });
 
   next();
 };

@@ -18,39 +18,44 @@ const rateLimitMiddleware = async (
   const key = `rate:${req.ip}`;
   let bucket: UserTokenBucket | null = null;
 
-  const redis = RedisClient.getInstance();
-  redis.connect();
-  const redisClient = redis.getClient();
-  const bucketRaw = await redisClient.hGetAll(key);
+  try {
+    const redis = RedisClient.getInstance();
+    const redisClient = redis.getClient();
 
-  if (bucketRaw && bucketRaw["last"]) {
-    bucket = {
-      tokens: Number(bucketRaw["tokens"]),
-      last: Number(bucketRaw["last"]),
-    };
-  } else {
-    bucket = { tokens: RATE_LIMIT_CAPACITY, last: now };
+    const bucketRaw = await redisClient.hGetAll(key);
+
+    if (bucketRaw && bucketRaw["last"]) {
+      bucket = {
+        tokens: Number(bucketRaw["tokens"]),
+        last: Number(bucketRaw["last"]),
+      };
+    } else {
+      bucket = { tokens: RATE_LIMIT_CAPACITY, last: now };
+    }
+
+    const elapsedSeconds = (now - bucket.last) / 1000;
+    bucket.tokens = Math.min(
+      RATE_LIMIT_CAPACITY,
+      bucket.tokens + BUCKET_REFILL_RATE * elapsedSeconds,
+    );
+
+    if (bucket.tokens < 1) {
+      return next(new TooManyRequestsError());
+    }
+
+    bucket.tokens -= 1;
+    bucket.last = now;
+
+    await redisClient.hSet(key, {
+      tokens: bucket.tokens,
+      last: bucket.last,
+    });
+
+    next();
+  } catch (err) {
+    console.error("Redis error in rateLimitMiddleware:", err);
+    next(err);
   }
-
-  const elapsedSeconds = (now - bucket.last) / 1000;
-  bucket.tokens = Math.min(
-    RATE_LIMIT_CAPACITY,
-    bucket.tokens + BUCKET_REFILL_RATE * elapsedSeconds,
-  );
-
-  if (bucket.tokens < 1) {
-    return next(new TooManyRequestsError());
-  }
-
-  bucket.tokens = bucket.tokens - 1;
-  bucket.last = now;
-
-  redisClient.hSet(key, {
-    tokens: bucket.tokens,
-    last: bucket.last,
-  });
-
-  next();
 };
 
 export default rateLimitMiddleware;

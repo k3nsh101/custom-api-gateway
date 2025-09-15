@@ -3,6 +3,7 @@ import { createClient, RedisClientType } from "redis";
 class RedisClient {
   private static instance: RedisClient;
   private client: RedisClientType;
+  private isConnected: boolean = false;
 
   private constructor() {
     this.client = createClient({
@@ -11,7 +12,6 @@ class RedisClient {
 
     this.client.on("error", (err) => {
       console.error("Redis Client Error", err);
-      throw new Error();
     });
   }
 
@@ -23,12 +23,17 @@ class RedisClient {
   }
 
   public async connect(): Promise<void> {
-    if (!this.client.isOpen) {
+    if (!this.isConnected) {
       await this.client.connect();
+      this.isConnected = true;
+      console.log("Redis connected");
     }
   }
 
   public getClient(): RedisClientType {
+    if (!this.isConnected) {
+      throw new Error("Redis client is not connected yet");
+    }
     return this.client;
   }
 }

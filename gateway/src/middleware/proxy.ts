@@ -8,6 +8,7 @@ import authMiddleware from "./auth";
 import rateLimitMiddleware from "./rateLimit";
 import cachingMiddleware from "./cache";
 import RedisClient from "../config/redis";
+import logger from "../config/logger";
 
 const proxyMiddleware = (routes: Route[]) => {
   const router = Router();
@@ -33,19 +34,39 @@ const proxyMiddleware = (routes: Route[]) => {
           proxyRes: responseInterceptor(
             async (responseBuffer, proxyRes, req, res) => {
               const response = responseBuffer.toString("utf8");
+              const method = req.method;
               const key = `cache:${req.originalUrl}`;
+              const contentType = res.getHeader("Content-Type")?.toString();
               try {
-                if (
-                  res
-                    .getHeader("Content-Type")
-                    ?.toString()
-                    .includes("application/json")
-                ) {
+                if (contentType?.includes("application/json")) {
                   redisClient.setEx(key, ttl, response);
-                  console.log("setting cache", key);
+
+                  logger.info("Route cache set", {
+                    route,
+                    method,
+                    cacheKey: key,
+                    status: proxyRes.statusCode,
+                    bodyLength: response.length,
+                    timestamp: new Date().toISOString(),
+                  });
+                } else {
+                  logger.info("Route response skipped caching (non-JSON)", {
+                    route,
+                    method,
+                    status: proxyRes.statusCode,
+                    contentType,
+                    timestamp: new Date().toISOString(),
+                  });
                 }
               } catch (err: any) {
-                console.log("Error setting response cache");
+                logger.error("Error caching route response", {
+                  route,
+                  method,
+                  status: proxyRes.statusCode,
+                  error: err.message,
+                  stack: err.stack,
+                  timestamp: new Date().toISOString(),
+                });
               }
               return response;
             },

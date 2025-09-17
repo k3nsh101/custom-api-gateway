@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 import { NextFunction, Request, Response } from "express";
-import rateLimitMiddleware, {
-  tokenBucket,
-} from "../../src/middleware/rateLimit";
+import RedisClient from "../../src/config/redis";
+import rateLimitMiddleware from "../../src/middleware/rateLimit";
 import { TooManyRequestsError } from "../../src/utils/errorUtils";
 
 describe("Token Bucket Rate Limiter", () => {
@@ -10,92 +9,95 @@ describe("Token Bucket Rate Limiter", () => {
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
 
+  const RATE_LIMIT_CAPACITY = Number(process.env["RATE_LIMIT_CAPACITY"]);
+
+  // Mock Redis
+  const mockHGetAll = vi.fn();
+  const mockHSet = vi.fn();
+  const mockRedisClient = { hGetAll: mockHGetAll, hSet: mockHSet };
+  const mockGetInstance = vi.spyOn(RedisClient, "getInstance").mockReturnValue({
+    getClient: () => mockRedisClient,
+  } as any);
+
   beforeEach(() => {
-    tokenBucket.clear();
     mockRequest = { ip: "127.0.0.1" };
     mockResponse = {};
     mockNext = vi.fn();
+
+    mockHGetAll.mockReset();
+    mockHSet.mockReset();
   });
 
-  it("allows requests when tokens are available", () => {
-    rateLimitMiddleware(
+  it("allows requests when tokens are available", async () => {
+    mockHGetAll.mockResolvedValue({ tokens: "5", last: `${Date.now()}` });
+
+    await rateLimitMiddleware(
       mockRequest as Request,
       mockResponse as Response,
       mockNext,
     );
 
-    expect(mockNext).toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalledOnce();
     const errorPassed = (mockNext as Mock).mock.calls[0]?.[0];
     expect(errorPassed).toBeUndefined();
-
-    const bucket = tokenBucket.get(`rate:${mockRequest.ip}`);
-    expect(bucket).toBeDefined();
-    expect(bucket?.tokens).toBeLessThanOrEqual(
-      Number(process.env["RATE_LIMIT_CAPACITY"]),
-    );
+    expect(mockHSet).toHaveBeenCalled();
   });
 
-  it("reduces token count for each request", () => {
-    const initialCapacity = Number(process.env["RATE_LIMIT_CAPACITY"]);
-    rateLimitMiddleware(
+  it("reduces token count for each request", async () => {
+    const initialCapacity = 5;
+    const lastTime = Date.now();
+    mockHGetAll.mockResolvedValue({ tokens: initialCapacity, last: lastTime });
+
+    await rateLimitMiddleware(
       mockRequest as Request,
       mockResponse as Response,
       mockNext,
     );
-    const bucket = tokenBucket.get(`rate:${mockRequest.ip}`);
-    expect(bucket?.tokens).toBe(initialCapacity - 1);
+
+    expect(mockHSet).toHaveBeenCalledWith(
+      `rate:${mockRequest.ip}`,
+      expect.objectContaining({
+        tokens: initialCapacity - 1,
+      }),
+    );
   });
 
-  it("blocks request when tokens are exhausted", () => {
-    const capacity = Number(process.env["RATE_LIMIT_CAPACITY"]) || 2;
+  it("blocks request when tokens are exhausted", async () => {
+    mockHGetAll.mockResolvedValue({ tokens: 0, last: Date.now() });
 
-    // Exhaust the bucket
-    for (let i = 0; i < capacity; i++) {
-      rateLimitMiddleware(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext,
-      );
-    }
-
-    // Next request should fail
-    const nextFn = vi.fn();
-    rateLimitMiddleware(
+    await rateLimitMiddleware(
       mockRequest as Request,
       mockResponse as Response,
-      nextFn,
+      mockNext,
     );
 
-    const errorPassed = nextFn.mock.calls[0]?.[0];
+    const errorPassed = (mockNext as Mock).mock.calls[0]?.[0];
     expect(errorPassed).toBeInstanceOf(TooManyRequestsError);
+    expect(mockHSet).not.toHaveBeenCalled();
   });
 
   it("refills tokens over time", async () => {
-    const capacity = Number(process.env["RATE_LIMIT_CAPACITY"]) || 2;
+    const currentTokens = RATE_LIMIT_CAPACITY - 1;
+    mockHGetAll.mockResolvedValue({
+      tokens: currentTokens,
+      last: Date.now() - 1000,
+    });
 
-    // Exhaust the bucket
-    for (let i = 0; i < capacity; i++) {
-      rateLimitMiddleware(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext,
-      );
-    }
-
-    // Simulate wait for 1 second
-    const bucket = tokenBucket.get(`rate:${mockRequest.ip}`)!;
-    bucket.last -= 1000; // go back 1 second
-
-    const nextFn = vi.fn();
-    rateLimitMiddleware(
+    await rateLimitMiddleware(
       mockRequest as Request,
       mockResponse as Response,
-      nextFn,
+      mockNext,
     );
 
     // Tokens should have refilled
-    expect(nextFn).toHaveBeenCalled();
-    const errorPassed = nextFn.mock.calls[0]?.[0];
+    expect(mockNext).toHaveBeenCalled();
+    expect(mockHSet).toHaveBeenCalledWith(
+      `rate:${mockRequest.ip}`,
+      expect.objectContaining({
+        tokens: currentTokens, // tokens = currentTokens + 1 - 1
+      }),
+    );
+    const errorPassed = (mockNext as Mock).mock.calls[0]?.[0];
     expect(errorPassed).toBeUndefined();
   });
 });

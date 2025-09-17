@@ -1,9 +1,19 @@
-import { describe, it } from "vitest";
+import { Express } from "express";
+import { beforeAll, describe, it } from "vitest";
 import request from "supertest";
-import app from "../../src/app";
+import setupApp from "../../src/app";
 import { generateTestToken } from "../util/jwt";
+import RedisClient from "../../src/config/redis";
 
 describe("Requesting forwarding", () => {
+  let app: Express;
+  beforeAll(async () => {
+    const redis = RedisClient.getInstance();
+    await redis.connect();
+
+    app = setupApp();
+  });
+
   it("should return unauthorized from service A when token is empty", async () => {
     await request(app).get("/api/serviceA").expect(401);
   });

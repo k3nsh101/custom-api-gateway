@@ -1,17 +1,12 @@
 import express from "express";
-import API_ROUTES from "./config/apiRoutes";
-import proxyMiddleware from "./middleware/proxy";
 import errorMiddleware from "./middleware/error";
 import notFoundMiddleware from "./middleware/notFound";
-import requestLogger from "./middleware/requestLogger";
-import metricsMiddleware from "./middleware/metrics";
 import { register } from "prom-client";
+import apiMiddleware from "./middleware/api";
 
 const setupApp = () => {
   const app = express();
-  app.use(metricsMiddleware);
-  app.use(requestLogger);
-  app.use("/api", proxyMiddleware(API_ROUTES));
+  app.use("/api", apiMiddleware());
 
   app.get("/metrics", async (req, res, next) => {
     try {

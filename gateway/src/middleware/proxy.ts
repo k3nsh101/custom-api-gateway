@@ -37,6 +37,8 @@ const proxyMiddleware = (routes: Route[]) => {
               const method = req.method;
               const key = `cache:${req.originalUrl}`;
               const contentType = res.getHeader("Content-Type")?.toString();
+              res.locals["cacheHit"] = false;
+
               try {
                 if (contentType?.includes("application/json")) {
                   redisClient.setEx(key, ttl, response);

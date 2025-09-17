@@ -14,6 +14,7 @@ const cachingMiddleware = async (
     const cached = await redisClient.get(key);
 
     if (cached) {
+      res.locals["cacheHit"] = true;
       res.setHeader("X-Cache", "HIT");
       return res.json(JSON.parse(cached));
     }

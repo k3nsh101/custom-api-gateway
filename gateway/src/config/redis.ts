@@ -11,7 +11,12 @@ class RedisClient {
     });
 
     this.client.on("error", (err) => {
-      console.error("Redis Client Error", err);
+      logger.error("Setup Error:", {
+        message: `Failed to create Redis Client ${err.message}`,
+        status: 500,
+        timestamp: new Date().toISOString(),
+        stack: err.stack,
+      });
     });
   }
 
@@ -26,7 +31,7 @@ class RedisClient {
     if (!this.isConnected) {
       await this.client.connect();
       this.isConnected = true;
-      console.log("Redis connected");
+      logger.info("Redis Connected");
     }
   }
 

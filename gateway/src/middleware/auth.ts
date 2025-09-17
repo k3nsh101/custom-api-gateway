@@ -18,7 +18,10 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (!token) throw new UnAuthorizedError();
 
   const jwtSecret = process.env["JWT_SECRET"];
-  if (!jwtSecret) return next(new Error());
+  if (!jwtSecret)
+    return next(
+      new Error("Setup Error: Environment variable for JWT_SECRET is not set"),
+    );
 
   try {
     jwt.verify(token!, process.env["JWT_SECRET"]!);

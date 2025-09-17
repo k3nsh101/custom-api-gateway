@@ -11,7 +11,8 @@ const errorMiddleware = (
   const method = req.method;
   const url = req.originalUrl;
   const stack = err.stack;
-  const timestamp = new Date();
+  const timestamp = new Date().toISOString();
+
   if (err instanceof AppError) {
     logger.error("Application Error:", {
       message: err.message,

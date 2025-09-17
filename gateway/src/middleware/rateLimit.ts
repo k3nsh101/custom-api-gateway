@@ -10,8 +10,11 @@ const rateLimitMiddleware = async (
   next: NextFunction,
 ) => {
   if (isNaN(RATE_LIMIT_CAPACITY) || isNaN(BUCKET_REFILL_RATE)) {
-    console.log("Environment variables for Token bucket is not set");
-    return next(new Error());
+    return next(
+      new Error(
+        "Setup Error: Environment variables for Token Bucket is not set",
+      ),
+    );
   }
 
   const now = Date.now();
@@ -53,7 +56,6 @@ const rateLimitMiddleware = async (
 
     next();
   } catch (err) {
-    console.error("Redis error in rateLimitMiddleware:", err);
     next(err);
   }
 };

@@ -20,7 +20,6 @@ const cachingMiddleware = async (
     }
     return next();
   } catch (err: any) {
-    console.log("Error in caching middleware", err);
     next(new Error(err.mesasge));
   }
 };

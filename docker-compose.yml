@@ -1,0 +1,27 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - 8080:8080
+    depends_on:
+      - serviceA
+      - serviceB
+      - redis
+    env_file:
+      - ./gateway/.env.prod
+
+  serviceA:
+    build: ./services/serviceA
+    image: custom-api-gateway-services-a
+    ports:
+      - 3001:3001
+
+  serviceB:
+    build: ./services/serviceB
+    image: custom-api-gateway-services-b
+    ports:
+      - 3002:3002
+
+  redis:
+    image: redis
+    command: redis-server

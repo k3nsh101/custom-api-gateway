@@ -8,8 +8,9 @@ class RedisClient {
 
   private constructor() {
     this.client = createClient({
-      url: process.env["REDIS_URL"] || "redis://localhost:6379",
       socket: {
+        host: process.env["REDIS_HOST"] || "localhost",
+        port: Number(process.env["REDIS_PORT"]) || 6379,
         reconnectStrategy: (retries: number, cause: any) => {
           if (cause.code === "ECONNREFUSED" && retries < 5) {
             return Math.min(retries * 1000, 30000);

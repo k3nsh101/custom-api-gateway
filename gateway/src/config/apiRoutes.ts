@@ -1,12 +1,12 @@
 const API_ROUTES = [
   {
     path: "/serviceA",
-    upstream: "http://localhost:3001",
+    upstream: process.env["SERVICE_A_URL"] || "http://localhost:3001",
     protected: true,
   },
   {
     path: "/serviceB",
-    upstream: "http://localhost:3002",
+    upstream: process.env["SERVICE_B_URL"] || "http://localhost:3001",
     protected: false,
   },
 ];

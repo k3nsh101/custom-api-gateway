@@ -1,4 +1,5 @@
 import { createClient, RedisClientType } from "redis";
+import logger from "./logger";
 
 class RedisClient {
   private static instance: RedisClient;
@@ -8,6 +9,25 @@ class RedisClient {
   private constructor() {
     this.client = createClient({
       url: process.env["REDIS_URL"] || "redis://localhost:6379",
+      socket: {
+        reconnectStrategy: (retries: number, cause: any) => {
+          if (cause.code === "ECONNREFUSED" && retries < 5) {
+            return Math.min(retries * 1000, 30000);
+          }
+
+          if (retries > 10) {
+            logger.error("Setup Error:", {
+              message: "Too many attempts creating create Redis Client",
+              status: 500,
+              timestamp: new Date().toISOString(),
+              stack: cause,
+            });
+            return new Error("Too many reconnection attempts");
+          }
+
+          return Math.min(retries * 50, 5000);
+        },
+      },
     });
 
     this.client.on("error", (err) => {
